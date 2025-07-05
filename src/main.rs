@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+
+use plotters::prelude::*;
 use rand::{
     distr::{Distribution, StandardUniform},
     Rng,
@@ -83,7 +86,7 @@ fn run_sim() -> Vec<RollResult> {
     results
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut results = Vec::new();
     for _ in 0..100 {
         results.push(run_sim());
@@ -92,4 +95,43 @@ fn main() {
         "Average number of rolls to earn all prizes: {}",
         results.iter().fold(0, |sum, sim_res| sum + sim_res.len()) as f32 / 100.
     );
+
+    let mut hist_data: HashMap<usize, usize> = HashMap::new();
+    for sim_res in results {
+        hist_data
+            .entry(sim_res.len())
+            .and_modify(|count| *count += 1)
+            .or_insert(1);
+    }
+
+    let root = BitMapBackend::new("output/100-sim.png", (1280, 720)).into_drawing_area();
+    root.fill(&WHITE)?;
+
+    let mut chart_builder = ChartBuilder::on(&root);
+    chart_builder
+        .margin(5)
+        .set_left_and_bottom_label_area_size(50);
+
+    let mut chart_context = chart_builder
+        .build_cartesian_2d(
+            (8..35 as usize).into_segmented(),
+            0..*hist_data.values().max().unwrap() + 5,
+        )
+        .unwrap();
+    chart_context
+        .configure_mesh()
+        .label_style(("Calibri", 28))
+        .draw()
+        .unwrap();
+
+    chart_context
+        .draw_series(
+            Histogram::vertical(&chart_context)
+                .style(BLUE.filled())
+                .margin(10)
+                .data(hist_data),
+        )
+        .unwrap();
+
+    Ok(())
 }
