@@ -105,6 +105,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .or_insert(1);
     }
 
+    for (idx, count) in hist_data.iter() {
+        println!(
+            "{}: {} ({}%)",
+            idx,
+            count,
+            (*count as f64 / runs as f64) * 100.
+        );
+    }
+
     let max_count = *hist_data.values().max().unwrap();
     let left_label_area_size = if max_count > 500 { 100 } else { 50 };
 
