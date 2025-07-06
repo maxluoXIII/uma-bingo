@@ -88,12 +88,13 @@ fn run_sim() -> Vec<RollResult> {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut results = Vec::new();
-    for _ in 0..100 {
+    let runs = 1000000;
+    for _ in 0..runs {
         results.push(run_sim());
     }
     println!(
         "Average number of rolls to earn all prizes: {}",
-        results.iter().fold(0, |sum, sim_res| sum + sim_res.len()) as f32 / 100.
+        results.iter().fold(0, |sum, sim_res| sum + sim_res.len()) as f32 / runs as f32
     );
 
     let mut hist_data: HashMap<usize, usize> = HashMap::new();
@@ -104,23 +105,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .or_insert(1);
     }
 
-    let root = BitMapBackend::new("output/100-sim.png", (1280, 720)).into_drawing_area();
+    let max_count = *hist_data.values().max().unwrap();
+    let left_label_area_size = if max_count > 500 { 100 } else { 50 };
+
+    let file_name = format!("output/{}-sim.png", runs);
+    let root = BitMapBackend::new(&file_name, (1280, 720)).into_drawing_area();
     root.fill(&WHITE)?;
 
     let mut chart_builder = ChartBuilder::on(&root);
     chart_builder
         .margin(5)
-        .set_left_and_bottom_label_area_size(50);
+        .set_label_area_size(LabelAreaPosition::Bottom, 50)
+        .set_label_area_size(LabelAreaPosition::Left, left_label_area_size)
+        .caption(
+            format!("Result of {} simulations of uma-bingo", runs),
+            ("Calibri", 36),
+        );
 
     let mut chart_context = chart_builder
-        .build_cartesian_2d(
-            (8..35 as usize).into_segmented(),
-            0..*hist_data.values().max().unwrap() + 5,
-        )
+        .build_cartesian_2d((8..35 as usize).into_segmented(), 0..max_count + 5)
         .unwrap();
     chart_context
         .configure_mesh()
         .label_style(("Calibri", 28))
+        .x_desc("Number of rolls to earn all prizes")
+        .y_desc("Number of samples")
         .draw()
         .unwrap();
 
